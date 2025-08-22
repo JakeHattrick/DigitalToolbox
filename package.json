@@ -9,6 +9,7 @@
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "jszip": "^3.10.1",
     "lodash": "^4.17.21",
     "lucide-react": "^0.541.0",
     "react": "^19.1.1",
@@ -16,7 +17,8 @@
     "react-router-dom": "^7.8.2",
     "react-scripts": "5.0.1",
     "recharts": "^3.1.2",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -27,7 +29,6 @@
     "start:electron": "npm run build && electron .",
     "dist": "npm run build && electron-builder"
   },
-
   "build": {
     "appId": "com.yourdomain.digitaltoolbox",
     "productName": "Digital Toolbox",
@@ -36,9 +37,9 @@
       "output": "dist"
     },
     "files": [
-      "build/**",                 
-      "electron/**/*",            
-      "package.json"              
+      "build/**",
+      "electron/**/*",
+      "package.json"
     ],
     "asar": true,
     "mac": {

@@ -8,6 +8,7 @@ export default function Layout() {
         <h2>Digital Toolbox</h2>
         <nav>
           <NavLink to="/dashboard" className="link">Dashboard</NavLink>
+          <NavLink to="/file-merge" className="link">File Merge</NavLink>
           </nav>
       </aside>
 
