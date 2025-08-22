@@ -1,0 +1,6 @@
+.app { display: grid; grid-template-columns: 240px 1fr; height: 100vh; }
+.sidebar { padding: 16px; border-right: 1px solid #e5e5e5; }
+.sidebar h2 { margin: 0 0 16px; font-size: 18px; }
+.link { display: block; padding: 8px 10px; border-radius: 8px; text-decoration: none; color: inherit; }
+.link.active { background: #f0f0f0; font-weight: 600; }
+.content { padding: 24px; overflow: auto; }
