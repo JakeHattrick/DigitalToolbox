@@ -1,6 +1,97 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  Button,
+  TextField,
+  Grid,
+  Alert,
+  LinearProgress,
+  Chip,
+  Card,
+  CardContent,
+  styled
+} from '@mui/material';
+import {
+  CloudUpload,
+  Description,
+  TableChart,
+  Settings,
+  PlayArrow
+} from '@mui/icons-material';
+
+// Styled components
+const GradientBox = styled(Box)({
+  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  minHeight: '100vh',
+  padding: '20px',
+});
+
+const GlassContainer = styled(Container)({
+  maxWidth: '1200px',
+  background: 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: '20px',
+  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+  overflow: 'hidden',
+  padding: 0,
+});
+
+const HeaderBox = styled(Box)({
+  background: 'linear-gradient(45deg, #667eea, #764ba2)',
+  color: 'white',
+  padding: '30px',
+  textAlign: 'center',
+});
+
+const SectionCard = styled(Card)({
+  background: 'white',
+  borderRadius: '15px',
+  marginBottom: '30px',
+  boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)',
+  border: '1px solid #f0f0f0',
+});
+
+const UploadButton = styled(Button)({
+  background: 'linear-gradient(45deg, #667eea, #764ba2)',
+  color: 'white',
+  padding: '15px 20px',
+  borderRadius: '10px',
+  fontWeight: 500,
+  minHeight: '60px',
+  width: '100%',
+  '&:hover': {
+    background: 'linear-gradient(45deg, #5a6fd8, #6a4190)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 5px 15px rgba(102, 126, 234, 0.4)',
+  },
+  transition: 'all 0.3s ease',
+});
+
+const MergeButton = styled(Button)(({ disabled }) => ({
+  background: disabled 
+    ? '#6c757d' 
+    : 'linear-gradient(45deg, #28a745, #20c997)',
+  color: 'white',
+  padding: '15px 30px',
+  borderRadius: '10px',
+  fontSize: '1.1rem',
+  fontWeight: 600,
+  width: '100%',
+  '&:hover': disabled ? {} : {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 5px 15px rgba(40, 167, 69, 0.4)',
+  },
+  '&:disabled': {
+    background: '#6c757d',
+    cursor: 'not-allowed',
+  },
+  transition: 'all 0.3s ease',
+}));
 
 const FileMerge = () => {
   const [files, setFiles] = useState({
@@ -205,169 +296,212 @@ const FileMerge = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-5">
-      <div className="max-w-6xl mx-auto bg-white bg-opacity-95 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8 text-center">
-          <h1 className="text-4xl font-bold mb-3">Document Merge Tool</h1>
-          <p className="text-lg opacity-90">
+    <GradientBox>
+      <GlassContainer>
+        <HeaderBox>
+          <Typography variant="h3" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
+            Document Merge Tool
+          </Typography>
+          <Typography variant="h6" sx={{ opacity: 0.9 }}>
             Merge Excel data with Word document templates seamlessly. Use merge fields like {`{{fieldname}}`} in your Word documents.
-          </p>
-        </div>
+          </Typography>
+        </HeaderBox>
         
-        <div className="p-10 space-y-8">
+        <Box sx={{ p: 5 }}>
           {/* Reference Files Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
-              📄 Reference Files
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block w-full">
+          <SectionCard>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h5" component="h2" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Description /> Reference Files
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
                   <input
-                    type="file"
                     accept=".docx"
-                    onChange={(e) => handleFileSelect(e, 'refTemplate')}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 min-h-16 font-medium">
-                    Choose Reference Template (.docx)
-                  </div>
-                </label>
-                <div className={`mt-3 p-3 rounded-lg text-sm text-center ${
-                  getFileStatus('refTemplate').className === 'file-uploaded' 
-                    ? 'bg-green-100 text-green-800 border border-green-200' 
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}>
-                  {getFileStatus('refTemplate').text}
-                </div>
-              </div>
-              <div>
-                <label className="block w-full">
-                  <input
+                    style={{ display: 'none' }}
+                    id="ref-template-upload"
                     type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => handleFileSelect(e, 'refData')}
-                    className="hidden"
+                    onChange={(e) => handleFileSelect(e, 'refTemplate')}
                   />
-                  <div className="flex items-center justify-center p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 min-h-16 font-medium">
-                    Choose Reference Data (.xlsx)
-                  </div>
-                </label>
-                <div className={`mt-3 p-3 rounded-lg text-sm text-center ${
-                  getFileStatus('refData').className === 'file-uploaded' 
-                    ? 'bg-green-100 text-green-800 border border-green-200' 
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}>
-                  {getFileStatus('refData').text}
-                </div>
-              </div>
-            </div>
-          </div>
+                  <label htmlFor="ref-template-upload">
+                    <UploadButton component="span" startIcon={<CloudUpload />}>
+                      Choose Reference Template (.docx)
+                    </UploadButton>
+                  </label>
+                  <Box sx={{ mt: 1 }}>
+                    <Chip
+                      label={getFileStatus('refTemplate').text}
+                      color={getFileStatus('refTemplate').className === 'file-uploaded' ? 'success' : 'default'}
+                      variant={getFileStatus('refTemplate').className === 'file-uploaded' ? 'filled' : 'outlined'}
+                      sx={{ width: '100%', py: 1 }}
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <input
+                    accept=".xlsx,.xls"
+                    style={{ display: 'none' }}
+                    id="ref-data-upload"
+                    type="file"
+                    onChange={(e) => handleFileSelect(e, 'refData')}
+                  />
+                  <label htmlFor="ref-data-upload">
+                    <UploadButton component="span" startIcon={<TableChart />}>
+                      Choose Reference Data (.xlsx)
+                    </UploadButton>
+                  </label>
+                  <Box sx={{ mt: 1 }}>
+                    <Chip
+                      label={getFileStatus('refData').text}
+                      color={getFileStatus('refData').className === 'file-uploaded' ? 'success' : 'default'}
+                      variant={getFileStatus('refData').className === 'file-uploaded' ? 'filled' : 'outlined'}
+                      sx={{ width: '100%', py: 1 }}
+                    />
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </SectionCard>
 
           {/* Document Files Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
-              📊 Document Files
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block w-full">
+          <SectionCard>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h5" component="h2" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TableChart /> Document Files
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
                   <input
-                    type="file"
                     accept=".docx"
-                    onChange={(e) => handleFileSelect(e, 'docTemplate')}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 min-h-16 font-medium">
-                    Choose Document Template (.docx)
-                  </div>
-                </label>
-                <div className={`mt-3 p-3 rounded-lg text-sm text-center ${
-                  getFileStatus('docTemplate').className === 'file-uploaded' 
-                    ? 'bg-green-100 text-green-800 border border-green-200' 
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}>
-                  {getFileStatus('docTemplate').text}
-                </div>
-              </div>
-              <div>
-                <label className="block w-full">
-                  <input
+                    style={{ display: 'none' }}
+                    id="doc-template-upload"
                     type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => handleFileSelect(e, 'docData')}
-                    className="hidden"
+                    onChange={(e) => handleFileSelect(e, 'docTemplate')}
                   />
-                  <div className="flex items-center justify-center p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 min-h-16 font-medium">
-                    Choose Document Data (.xlsx)
-                  </div>
-                </label>
-                <div className={`mt-3 p-3 rounded-lg text-sm text-center ${
-                  getFileStatus('docData').className === 'file-uploaded' 
-                    ? 'bg-green-100 text-green-800 border border-green-200' 
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}>
-                  {getFileStatus('docData').text}
-                </div>
-              </div>
-            </div>
-          </div>
+                  <label htmlFor="doc-template-upload">
+                    <UploadButton component="span" startIcon={<CloudUpload />}>
+                      Choose Document Template (.docx)
+                    </UploadButton>
+                  </label>
+                  <Box sx={{ mt: 1 }}>
+                    <Chip
+                      label={getFileStatus('docTemplate').text}
+                      color={getFileStatus('docTemplate').className === 'file-uploaded' ? 'success' : 'default'}
+                      variant={getFileStatus('docTemplate').className === 'file-uploaded' ? 'filled' : 'outlined'}
+                      sx={{ width: '100%', py: 1 }}
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <input
+                    accept=".xlsx,.xls"
+                    style={{ display: 'none' }}
+                    id="doc-data-upload"
+                    type="file"
+                    onChange={(e) => handleFileSelect(e, 'docData')}
+                  />
+                  <label htmlFor="doc-data-upload">
+                    <UploadButton component="span" startIcon={<TableChart />}>
+                      Choose Document Data (.xlsx)
+                    </UploadButton>
+                  </label>
+                  <Box sx={{ mt: 1 }}>
+                    <Chip
+                      label={getFileStatus('docData').text}
+                      color={getFileStatus('docData').className === 'file-uploaded' ? 'success' : 'default'}
+                      variant={getFileStatus('docData').className === 'file-uploaded' ? 'filled' : 'outlined'}
+                      sx={{ width: '100%', py: 1 }}
+                    />
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </SectionCard>
 
           {/* Output Settings Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
-              ⚙️ Output Settings
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-              <div className="relative">
-                <label className="absolute -top-2 left-4 bg-white px-2 text-sm font-semibold text-blue-600">
-                  Output Folder Name
-                </label>
-                <input
-                  type="text"
-                  value={outputLocation}
-                  onChange={(e) => setOutputLocation(e.target.value)}
-                  placeholder="Enter output folder name"
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <button
-                onClick={startMerge}
-                disabled={!canMerge()}
-                className={`w-full p-4 rounded-xl text-lg font-semibold transition-all duration-300 ${
-                  canMerge()
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:-translate-y-1'
-                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                }`}
-              >
-                {isProcessing ? 'Processing...' : 'Start Merge Process'}
-              </button>
-            </div>
-          </div>
+          <SectionCard>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h5" component="h2" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Settings /> Output Settings
+              </Typography>
+              <Grid container spacing={3} alignItems="flex-end">
+                <Grid item xs={12} md={8}>
+                  <TextField
+                    fullWidth
+                    label="Output Folder Name"
+                    value={outputLocation}
+                    onChange={(e) => setOutputLocation(e.target.value)}
+                    placeholder="Enter output folder name"
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '10px',
+                        '&:hover fieldset': {
+                          borderColor: '#667eea',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#667eea',
+                        },
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: '#667eea',
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <MergeButton
+                    onClick={startMerge}
+                    disabled={!canMerge()}
+                    startIcon={<PlayArrow />}
+                    size="large"
+                  >
+                    {isProcessing ? 'Processing...' : 'Start Merge Process'}
+                  </MergeButton>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </SectionCard>
 
           {/* Status Section */}
           {status && (
-            <div className={`p-6 rounded-xl font-medium text-center ${
-              status.type === 'success' 
-                ? 'bg-green-100 text-green-800 border border-green-200'
-                : status.type === 'error'
-                ? 'bg-red-100 text-red-800 border border-red-200'
-                : 'bg-blue-100 text-blue-800 border border-blue-200'
-            }`}>
-              {status.message}
+            <Alert
+              severity={
+                status.type === 'success' ? 'success' :
+                status.type === 'error' ? 'error' : 'info'
+              }
+              sx={{
+                borderRadius: '10px',
+                fontSize: '1rem',
+                '& .MuiAlert-message': {
+                  width: '100%',
+                },
+              }}
+            >
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {status.message}
+              </Typography>
               {status.progress !== null && (
-                <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-3">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
-                    style={{ width: `${status.progress}%` }}
-                  />
-                </div>
+                <LinearProgress
+                  variant="determinate"
+                  value={status.progress}
+                  sx={{
+                    mt: 2,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 4,
+                      background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                    },
+                  }}
+                />
               )}
-            </div>
+            </Alert>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </GlassContainer>
+    </GradientBox>
   );
 };
 

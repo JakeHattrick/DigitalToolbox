@@ -9,6 +9,7 @@ export default function Layout() {
         <nav>
           <NavLink to="/dashboard" className="link">Dashboard</NavLink>
           <NavLink to="/file-merge" className="link">File Merge</NavLink>
+          <NavLink to="/doc-pdf" className="link">Doc to PDF Converter</NavLink>
           </nav>
       </aside>
 
