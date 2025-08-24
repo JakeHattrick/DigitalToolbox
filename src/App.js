@@ -5,6 +5,7 @@ import Dashboard from "./pages/dashboard.js";
 import FileMerge from './pages/fileMerge.js';
 import DocToPdf from './pages/docToPdf.js';
 import JsonToCsv from './pages/jsonToCsv.js';
+import JsonSplitter from './pages/jsonSplitter.js';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/file-merge" element={<FileMerge />} />
         <Route path="/doc-pdf" element={<DocToPdf />} />
         <Route path="/json-csv" element={<JsonToCsv />} />
+        <Route path="/json-splitter" element={<JsonSplitter />} />
         {/* Optional: 404 */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
