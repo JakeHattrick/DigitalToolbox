@@ -1,21 +1,94 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CloudUpload, FileText, Trash2, X, Download } from 'lucide-react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Divider,
+  Chip,
+  Alert,
+  LinearProgress,
+  IconButton,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Container,
+  Fade,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
+import {
+  CloudUpload,
+  Description,
+  PictureAsPdf,
+  Delete,
+  Clear,
+  GetApp,
+  Merge,
+  FileCopy,
+  FolderOpen,
+  CheckCircle,
+  Error as ErrorIcon,
+  Info
+} from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 
 // Access Electron APIs through the secure preload script
 const electronAPI = window.electronAPI;
+
+// Styled components
+const GradientHeader = styled(Paper)(({ theme }) => ({
+  background: 'linear-gradient(135deg, #af3194ff 0%, #5337d1ff 100%)',
+  color: 'white',
+  padding: theme.spacing(4),
+  borderRadius: 0,
+  textAlign: 'center'
+}));
+
+const UploadArea = styled(Paper)(({ theme }) => ({
+  border: `2px dashed ${theme.palette.grey[300]}`,
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(8),
+  textAlign: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.action.hover
+  }
+}));
 
 const DocToPdf = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [status, setStatus] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogContent, setDialogContent] = useState({});
+
+  const steps = ['Select DOCX Files', 'Review Selection', 'Convert & Download'];
 
   const removeFile = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    if (selectedFiles.length === 1) {
+      setActiveStep(0);
+    }
   };
 
   const clearAllFiles = () => {
     setSelectedFiles([]);
     setStatus(null);
+    setActiveStep(0);
   };
 
   const showStatus = (message, type = 'processing', progress = null) => {
@@ -40,6 +113,10 @@ const DocToPdf = () => {
           !selectedFiles.find(f => f.path === file.path)
         );
         setSelectedFiles(prev => [...prev, ...newFiles]);
+        
+        if (fileObjects.length > 0) {
+          setActiveStep(1);
+        }
       }
     } catch (error) {
       showStatus('Error selecting files: ' + error.message, 'error');
@@ -49,9 +126,7 @@ const DocToPdf = () => {
   useEffect(() => {
     // Subscribe to progress events from the worker
     const unsubscribe = electronAPI?.onDocxToPdfProgress?.((p) => {
-      // p is an integer 0–100; worker emits 0–80 converting, 80–100 merging
-      // keep the message short; you already show a nice progress bar
-      console.log('progress',p);
+      console.log('progress', p);
       showStatus(`Converting documents… ${p}%`, 'processing', p);
     });
 
@@ -74,6 +149,7 @@ const DocToPdf = () => {
     }
 
     setIsProcessing(true);
+    setActiveStep(2);
     
     try {
       showStatus('Initializing Word application...', 'processing', 5);
@@ -94,15 +170,17 @@ const DocToPdf = () => {
 
       if (result.success) {
         showStatus(`Successfully converted ${selectedFiles.length} document(s) to PDF!`, 'success', 100);
-        const openFolder = await electronAPI.showMessageBox({
-          type: 'question',
-          buttons: ['Yes', 'No'],
-          defaultId: 0,
+        
+        setDialogContent({
           title: 'Conversion Complete',
           message: 'Documents converted successfully!',
-          detail: `PDF saved as: ${outputFileName}\n\nWould you like to open the Downloads folder?`
+          detail: `PDF saved as: ${outputFileName}\n\nWould you like to open the Downloads folder?`,
+          onConfirm: async () => {
+            await electronAPI.openDownloadsFolder();
+            setShowDialog(false);
+          }
         });
-        if (openFolder.response === 0) await electronAPI.openDownloadsFolder();
+        setShowDialog(true);
       } else {
         throw new Error(result.error || 'Unknown conversion error');
       }
@@ -128,6 +206,7 @@ const DocToPdf = () => {
     }
 
     setIsProcessing(true);
+    setActiveStep(2);
     
     try {
       showStatus('Initializing Word application...', 'processing', 10);
@@ -146,19 +225,16 @@ const DocToPdf = () => {
       if (result.success) {
         showStatus(`Successfully converted ${selectedFiles.length} document(s) to individual PDFs!`, 'success', 100);
         
-        // Ask user if they want to open the Downloads folder
-        const openFolder = await electronAPI.showMessageBox({
-          type: 'question',
-          buttons: ['Yes', 'No'],
-          defaultId: 0,
+        setDialogContent({
           title: 'Conversion Complete',
           message: 'Documents converted successfully!',
-          detail: `PDFs saved to Downloads folder\n\nWould you like to open the Downloads folder?`
+          detail: `PDFs saved to Downloads folder\n\nWould you like to open the Downloads folder?`,
+          onConfirm: async () => {
+            await electronAPI.openDownloadsFolder();
+            setShowDialog(false);
+          }
         });
-
-        if (openFolder.response === 0) {
-          await electronAPI.openDownloadsFolder();
-        }
+        setShowDialog(true);
       } else {
         throw new Error(result.error || 'Unknown conversion error');
       }
@@ -171,186 +247,330 @@ const DocToPdf = () => {
     }
   };
 
+  const reset = () => {
+    setSelectedFiles([]);
+    setStatus(null);
+    setActiveStep(0);
+    setIsProcessing(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-600 to-purple-800 p-5">
-      <div className="max-w-4xl mx-auto bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden">
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ overflow: 'hidden' }}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-8 text-center">
-          <h1 className="text-4xl font-bold mb-2">DOCX to PDF Converter</h1>
-          <p className="text-xl opacity-90">Convert Word documents to PDF using Microsoft Word (WinAX)</p>
-        </div>
+        <GradientHeader>
+          <Typography variant="h4" component="h1" gutterBottom>
+            DOCX to PDF Converter
+          </Typography>
+          <Typography variant="subtitle1">
+            Convert Word documents to PDF using Microsoft Word (WinAX)
+          </Typography>
+        </GradientHeader>
 
-        <div className="p-8">
-          {/* File Selection Section */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mb-8">
-            <div className="p-6">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                <CloudUpload className="text-indigo-500" size={28} />
-                Select DOCX Files
-              </h2>
-              
-              <div className="text-center">
-                <button
-                  onClick={selectFiles}
-                  disabled={isProcessing}
-                  className={`px-8 py-4 rounded-xl font-semibold text-white text-lg transition-all duration-300 flex items-center gap-2 mx-auto ${
-                    isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 hover:transform hover:-translate-y-1 hover:shadow-lg'
-                  }`}
+        {/* Stepper */}
+        <Box sx={{ p: 3, backgroundColor: 'grey.50' }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {steps.map((label, index) => (
+              <Step key={label}>
+                <StepLabel
+                  StepIconComponent={({ active, completed }) => {
+                    const icons = [CloudUpload, Description, PictureAsPdf];
+                    const Icon = icons[index];
+                    return (
+                      <Icon 
+                        sx={{ 
+                          color: active ? 'primary.main' : completed ? 'success.main' : 'grey.400',
+                          fontSize: 24
+                        }} 
+                      />
+                    );
+                  }}
                 >
-                  <FileText size={20} />
-                  {isProcessing ? 'Processing...' : 'Choose DOCX Files'}
-                </button>
-                <p className="text-sm text-gray-500 mt-3">
-                  PDFs will be saved to your Downloads folder
-                </p>
-              </div>
-            </div>
-          </div>
+                  {label}
+                </StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        </Box>
 
-          {/* Output Location Display */}
-          {selectedFiles.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mb-8">
-              <div className="p-6">
-                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                  Output Location
-                </h2>
+        <Box sx={{ p: 3 }}>
+          {/* File Selection Step */}
+          {activeStep === 0 && (
+            <Fade in timeout={500}>
+              <Box>
+                <UploadArea onClick={selectFiles}>
+                  <Description sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Select DOCX Files
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Choose Word documents to convert to PDF format
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<CloudUpload />}
+                    size="large"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? 'Processing...' : 'Choose DOCX Files'}
+                  </Button>
+                </UploadArea>
                 
-                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200">
-                  <div className="flex items-center gap-2 text-green-800">
-                    <div>
-                      <div className="text-sm font-medium">PDFs will be saved to:</div>
-                      <div className="font-medium text-green-900">
-                        Downloads folder
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                <Alert severity="info" sx={{ mt: 3 }}>
+                  <Typography variant="body2">
+                    💡 Requires Microsoft Word • Uses Windows COM automation (WinAX) • Supports .docx files<br/>
+                    📁 PDFs will be automatically saved to your Downloads folder
+                  </Typography>
+                </Alert>
+              </Box>
+            </Fade>
           )}
 
-          {/* File List Section */}
-          {selectedFiles.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mb-8">
-              <div className="p-6">
-                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                  Selected Files ({selectedFiles.length})
-                </h2>
-                
-                <div className="space-y-3">
-                  {selectedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="bg-white rounded-xl border-l-4 border-indigo-500 shadow-md p-4 flex items-center justify-between hover:shadow-lg transition-shadow duration-200"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 font-medium text-gray-800">
-                          <FileText className="text-indigo-500" size={20} />
-                          {file.name}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1 truncate" title={file.path}>
-                          {file.path}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeFile(index)}
-                        disabled={isProcessing}
-                        className="ml-4 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors duration-200 disabled:opacity-50"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Review Selection Step */}
+          {activeStep === 1 && selectedFiles.length > 0 && (
+            <Fade in timeout={500}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} lg={8}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="h6">
+                          Selected Files ({selectedFiles.length})
+                        </Typography>
+                        <Button 
+                          size="small" 
+                          onClick={selectFiles}
+                          startIcon={<CloudUpload />}
+                          disabled={isProcessing}
+                        >
+                          Add More Files
+                        </Button>
+                      </Box>
+                      
+                      <List>
+                        {selectedFiles.map((file, index) => (
+                          <ListItem
+                            key={index}
+                            sx={{
+                              border: 1,
+                              borderColor: 'grey.200',
+                              borderRadius: 1,
+                              mb: 1,
+                              backgroundColor: 'grey.50'
+                            }}
+                          >
+                            <ListItemIcon>
+                              <Description color="primary" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={file.name}
+                              secondary={
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                                  {file.path}
+                                </Typography>
+                              }
+                            />
+                            <IconButton
+                              onClick={() => removeFile(index)}
+                              disabled={isProcessing}
+                              color="error"
+                            >
+                              <Delete />
+                            </IconButton>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} lg={4}>
+                  <Card sx={{ height: 'fit-content' }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Output Location
+                      </Typography>
+                      
+                      <Alert severity="success" sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FolderOpen />
+                          <Box>
+                            <Typography variant="subtitle2">
+                              Downloads Folder
+                            </Typography>
+                            <Typography variant="body2">
+                              PDFs will be saved here automatically
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Alert>
+
+                      <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                        Conversion Options
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="primary"
+                          onClick={convertWithWinAX}
+                          disabled={isProcessing}
+                          startIcon={<Merge />}
+                        >
+                          Merge to Single PDF
+                        </Button>
+
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="success"
+                          onClick={convertSeparately}
+                          disabled={isProcessing}
+                          startIcon={<FileCopy />}
+                        >
+                          Convert Separately
+                        </Button>
+                        
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="error"
+                          onClick={clearAllFiles}
+                          disabled={isProcessing}
+                          startIcon={<Clear />}
+                        >
+                          Clear All
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Fade>
           )}
 
-          {/* Action Buttons Section */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mb-8">
-            <div className="p-6">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                Conversion Options
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  onClick={convertWithWinAX}
-                  disabled={selectedFiles.length === 0 || isProcessing}
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                    selectedFiles.length === 0 || isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 hover:transform hover:-translate-y-1 hover:shadow-lg'
-                  }`}
-                >
-                  <Download size={20} />
-                  {isProcessing ? 'Converting...' : 'Merge to Single PDF'}
-                </button>
+          {/* Convert Step */}
+          {activeStep === 2 && (
+            <Fade in timeout={500}>
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6">
+                    Conversion Progress
+                  </Typography>
+                  <Button 
+                    onClick={() => setActiveStep(1)}
+                    variant="outlined"
+                    disabled={isProcessing}
+                  >
+                    Back to Review
+                  </Button>
+                </Box>
 
-                <button
-                  onClick={convertSeparately}
-                  disabled={selectedFiles.length === 0 || isProcessing}
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                    selectedFiles.length === 0 || isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:transform hover:-translate-y-1 hover:shadow-lg'
-                  }`}
-                >
-                  <Download size={20} />
-                  {isProcessing ? 'Converting...' : 'Convert Separately'}
-                </button>
-                
-                <button
-                  onClick={clearAllFiles}
-                  disabled={selectedFiles.length === 0 || isProcessing}
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                    selectedFiles.length === 0 || isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:transform hover:-translate-y-1 hover:shadow-lg'
-                  }`}
-                >
-                  <X size={20} />
-                  Clear All
-                </button>
-              </div>
-            </div>
-          </div>
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Conversion Summary
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">
+                          Files Selected:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                          {selectedFiles.length}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">
+                          Output Location:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                          Downloads folder
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Typography variant="body2" color="text.secondary">
+                          Status:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                          {isProcessing ? 'Processing...' : 'Ready'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
 
-          {/* Status Section */}
-          {status && (
-            <div
-              className={`rounded-xl p-4 border ${
-                status.type === 'success'
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : status.type === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-800'
-                  : 'bg-blue-50 border-blue-200 text-blue-800'
-              }`}
-            >
-              <div className="font-medium text-lg mb-2">
-                {status.message}
-              </div>
-              {status.progress !== null && (
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300 ease-out rounded-full"
-                    style={{ width: `${status.progress}%` }}
-                  />
-                </div>
-              )}
-            </div>
+                {/* Status Section */}
+                {status && (
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        {status.type === 'success' && <CheckCircle color="success" />}
+                        {status.type === 'error' && <ErrorIcon color="error" />}
+                        {status.type === 'processing' && <Info color="info" />}
+                        
+                        <Typography variant="h6" sx={{ 
+                          color: status.type === 'success' ? 'success.main' : 
+                                 status.type === 'error' ? 'error.main' : 'info.main'
+                        }}>
+                          {status.message}
+                        </Typography>
+                      </Box>
+                      
+                      {status.progress !== null && (
+                        <Box sx={{ width: '100%' }}>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={status.progress} 
+                            sx={{ height: 8, borderRadius: 4 }}
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {status.progress}% Complete
+                          </Typography>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Box sx={{ textAlign: 'center', mt: 3 }}>
+                  <Button 
+                    onClick={reset}
+                    variant="outlined"
+                    startIcon={<CloudUpload />}
+                    disabled={isProcessing}
+                  >
+                    Convert More Files
+                  </Button>
+                </Box>
+              </Box>
+            </Fade>
           )}
+        </Box>
+      </Paper>
 
-          {/* Footer */}
-          <div className="text-center text-gray-500 text-sm mt-8">
-            <p>Requires Microsoft Word • Uses Windows COM automation (WinAX) • Supports .docx files</p>
-            <p className="mt-1">PDFs are automatically saved to your Downloads folder</p>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Dialog for completion confirmation */}
+      <Dialog open={showDialog} onClose={() => setShowDialog(false)}>
+        <DialogTitle>{dialogContent.title}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            {dialogContent.message}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {dialogContent.detail}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDialog(false)}>
+            No
+          </Button>
+          <Button onClick={dialogContent.onConfirm} variant="contained" autoFocus>
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 

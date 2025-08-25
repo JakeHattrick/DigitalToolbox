@@ -43,7 +43,7 @@ import { styled } from '@mui/material/styles';
 
 // Styled components
 const GradientHeader = styled(Paper)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+  background: 'linear-gradient(135deg, #5337d1ff 0%, #27a7b0ff 100%)',
   color: 'white',
   padding: theme.spacing(4),
   borderRadius: 0,
